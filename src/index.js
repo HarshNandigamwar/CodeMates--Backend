@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import http from "http";
 import mongoose from "mongoose";
 import authRoutes from "./routes/auth.routes.js";
+import postRoutes from "./routes/post.routes.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(express.json());
 
 // Use Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes);
 
 // Basic Route for testing
 app.get("/", (req, res) => {
