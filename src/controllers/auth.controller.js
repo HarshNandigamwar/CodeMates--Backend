@@ -1,6 +1,7 @@
 import User from "../models/User.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import cloudinary from "../config/cloudinary.js";
 
 // Helper function to create a JWT Token
 const generateToken = (id) => {
@@ -60,5 +61,36 @@ export const login = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+//  Update Profile Picture
+//  PUT /api/auth/update-profile-pic
+export const updateProfilePic = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Please upload an image" });
+    }
+
+    // Convert the buffer from Multer to a base64 string for Cloudinary
+    const fileBase64 = req.file.buffer.toString("base64");
+    const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(fileUri, {
+      folder: "codemates/codemates_profiles",
+    });
+
+    // Save the Cloudinary URL to the user in MongoDB
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePic: result.secure_url },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Upload failed" });
   }
 };

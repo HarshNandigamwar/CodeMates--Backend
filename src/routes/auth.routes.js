@@ -1,9 +1,17 @@
 import express from "express";
-import { signup, login } from "../controllers/auth.controller.js";
+import {
+  signup,
+  login,
+  updateProfilePic,
+} from "../controllers/auth.controller.js";
+import { protect } from "../middleware/auth.middleware.js";
+import upload from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 
 router.post("/signup", signup);
 router.post("/login", login);
+
+router.put("/update-profile-pic", protect, upload.single("profilePic"), updateProfilePic);
 
 export default router;
