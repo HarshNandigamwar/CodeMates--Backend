@@ -12,7 +12,17 @@ const generateToken = (id) => {
 //  POST /api/auth/signup
 export const signup = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const {
+      username,
+      email,
+      password,
+      name,
+      bio,
+      github,
+      portfolio,
+      linkedin,
+      techstack,
+    } = req.body;
 
     // 1. Check if user already exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -26,7 +36,13 @@ export const signup = async (req, res) => {
     // 3. Create user in database
     const user = await User.create({
       username,
+      name,
       email,
+      bio,
+      github,
+      portfolio,
+      linkedin,
+      techstack,
       password: hashedPassword,
     });
 
@@ -107,7 +123,7 @@ export const searchUsers = async (req, res) => {
         { username: { $regex: query, $options: "i" } },
         { name: { $regex: query, $options: "i" } },
       ],
-    }).select("username profilePic bio"); // Only send necessary data to frontend
+    }).select("username profilePic bio name"); // Only send necessary data to frontend
 
     res.status(200).json(users);
   } catch (error) {
