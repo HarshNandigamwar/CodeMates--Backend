@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post("/create", protect, upload.single("image"), createPost);
+router.post("/create", protect, upload.single("url"), createPost);
 router.get("/feed", getFeed);
 router.put("/like/:id", protect, likePost);
 router.post("/comment/:id", protect, commentPost);

@@ -25,7 +25,7 @@ export const createPost = async (req, res) => {
     const newPost = new Post({
       user: req.user._id,
       content,
-      image: mediaUrl,
+      url: mediaUrl,
       mediaType: mediaType, // Now it will save "video" or "image" instead of "text"
     });
 
