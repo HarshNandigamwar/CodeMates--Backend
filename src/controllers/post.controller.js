@@ -74,6 +74,7 @@ export const getFeed = async (req, res) => {
   try {
     const posts = await Post.find()
       .populate("user", "username profilePic") // Joins user data
+      .populate("comments.user", "username profilePic")
       .sort({ createdAt: -1 }); // Newest first
     res.status(200).json(posts);
   } catch (error) {
