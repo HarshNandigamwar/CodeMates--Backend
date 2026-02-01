@@ -1,31 +1,38 @@
 import Post from "../models/Post.model.js";
 import cloudinary from "../config/cloudinary.js";
 
-// 📝 Create a Post
+// 📝 Create a Post (Supports Image & Video)
 export const createPost = async (req, res) => {
   try {
     const { content } = req.body;
-    let imageUrl = "";
+    let mediaUrl = "";
+    let mediaType = "text"; // Default if no file is uploaded
 
-    // If user uploaded an image via Multer
     if (req.file) {
       const fileBase64 = req.file.buffer.toString("base64");
       const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+
       const result = await cloudinary.uploader.upload(fileUri, {
         folder: "codemates/codemates_posts",
+        resource_type: "auto",
       });
-      imageUrl = result.secure_url;
+
+      mediaUrl = result.secure_url;
+      // result.resource_type will return "image" or "video" from Cloudinary
+      mediaType = result.resource_type;
     }
 
     const newPost = new Post({
       user: req.user._id,
       content,
-      image: imageUrl,
+      image: mediaUrl,
+      mediaType: mediaType, // Now it will save "video" or "image" instead of "text"
     });
 
     await newPost.save();
     res.status(201).json(newPost);
   } catch (error) {
+    console.error("Upload error:", error);
     res.status(500).json({ message: "Error creating post" });
   }
 };
