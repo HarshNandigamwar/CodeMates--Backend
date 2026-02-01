@@ -56,6 +56,7 @@ export const signup = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 //  Authenticate user & get token
 // POST /api/auth/login
 export const login = async (req, res) => {
@@ -159,5 +160,66 @@ export const followUnfollowUser = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// Edit Profile
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { name, password, bio, github, portfolio, linkedin, techstack } =
+      req.body;
+
+    let user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // 1. Password Hash (Agar password update ho raha hai)
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    // 2. Profile Picture Upload (Cloudinary)
+    if (req.file) {
+      // Purani image delete karein (placeholder delete nahi karna hai)
+      if (user.profilePic && !user.profilePic.includes("placehold.co")) {
+        const publicId = user.profilePic.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(
+          `codemates/codemates_profiles/${publicId}`
+        );
+      }
+
+      const fileBase64 = req.file.buffer.toString("base64");
+      const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+      const result = await cloudinary.uploader.upload(fileUri, {
+        folder: "codemates/codemates_profiles",
+      });
+      user.profilePic = result.secure_url;
+    }
+
+    // 3. Other Details Update
+    user.name = name || user.name;
+    user.bio = bio || user.bio;
+    user.github = github || user.github;
+    user.portfolio = portfolio || user.portfolio;
+    user.linkedin = linkedin || user.linkedin;
+
+    // Techstack (Frontend se array aana chahiye)
+    if (techstack) {
+      user.techstack = Array.isArray(techstack)
+        ? techstack
+        : techstack.split(",");
+    }
+
+    const updatedUser = await user.save();
+
+    // Password hide karke response bhejein
+    const { password: _, ...userData } = updatedUser._doc;
+    res.status(200).json(userData);
+  } catch (error) {
+    console.error("Profile Update Error:", error);
+    res
+      .status(500)
+      .json({ message: "Error updating profile", error: error.message });
   }
 };

@@ -5,6 +5,7 @@ import {
   updateProfilePic,
   searchUsers,
   followUnfollowUser,
+  updateProfile,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.middleware.js";
@@ -24,5 +25,11 @@ router.put(
 router.get("/search/:query", protect, searchUsers);
 router.post("/follow/:id", protect, followUnfollowUser);
 router.get("/profile/:username", protect, getUserProfile);
+router.put(
+  "/update-profile",
+  protect,
+  upload.single("profilePic"),
+  updateProfile
+);
 
 export default router;
