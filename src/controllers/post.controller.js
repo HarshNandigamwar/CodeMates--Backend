@@ -1,5 +1,6 @@
 import Post from "../models/Post.model.js";
 import cloudinary from "../config/cloudinary.js";
+import User from "../models/User.model.js";
 
 // 📝 Create a Post (Supports Image & Video)
 export const createPost = async (req, res) => {
@@ -76,15 +77,119 @@ export const commentPost = async (req, res) => {
   }
 };
 
-// 🏠 Get Feed (All Posts)
-export const getFeed = async (req, res) => {
+// 🏠 Get Feed from followed user
+export const getFollowedPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
-      .populate("user", "username profilePic") // Joins user data
-      .populate("comments.user", "username profilePic")
-      .sort({ createdAt: -1 }); // Newest first
+    // 1. Check if User model is imported correctly
+    if (typeof User === "undefined") {
+      return res
+        .status(500)
+        .json({
+          message: "Backend Error: User model import missing at top of file",
+        });
+    }
+
+    const currentUser = await User.findById(req.user._id);
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "Login user not found" });
+    }
+
+    // 2. Fetch posts
+    const posts = await Post.find({
+      user: { $in: [...currentUser.following, req.user._id] },
+    })
+      .sort({ createdAt: -1 })
+      .populate("user", "username profilePic");
+
     res.status(200).json(posts);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching posts" });
+    console.error("DEBUG FEED ERROR:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching feed", error: error.message });
+  }
+};
+
+// Edit Post
+export const editPost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    let post = await Post.findById(id);
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Check ownership
+    if (post.user.toString() !== req.user._id.toString()) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized to edit this post" });
+    }
+
+    // Media update logic (if a new file is uploaded)
+    if (req.file) {
+      // 1. Purani file Cloudinary se delete karein (optional but recommended)
+      if (post.url) {
+        const publicId = post.url.split("/").slice(-2).join("/").split(".")[0];
+        await cloudinary.uploader.destroy(
+          `codemates/codemates_posts/${publicId}`,
+          { resource_type: post.mediaType }
+        );
+      }
+
+      // 2. Nayi file upload karein
+      const fileBase64 = req.file.buffer.toString("base64");
+      const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+      const result = await cloudinary.uploader.upload(fileUri, {
+        folder: "codemates/codemates_posts",
+        resource_type: "auto",
+      });
+
+      post.url = result.secure_url;
+      post.mediaType = result.resource_type;
+    }
+
+    // Text update karein
+    if (content) post.content = content;
+
+    await post.save();
+    res.status(200).json(post);
+  } catch (error) {
+    console.error("Edit Error:", error);
+    res
+      .status(500)
+      .json({ message: "Error updating post", error: error.message });
+  }
+};
+
+// Delete Post
+export const deletePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Check if the person deleting is the owner
+    if (post.user.toString() !== req.user._id.toString()) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized to delete this post" });
+    }
+
+    // If there is an image/video, delete it from Cloudinary
+    if (post.url) {
+      // We extract the "Public ID" from the URL
+      const publicId = post.url.split("/").pop().split(".")[0];
+      await cloudinary.uploader.destroy(
+        `codemates/codemates_posts/${publicId}`
+      );
+    }
+
+    await Post.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Post deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting post" });
   }
 };
