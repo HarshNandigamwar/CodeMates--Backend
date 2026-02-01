@@ -82,11 +82,9 @@ export const getFollowedPosts = async (req, res) => {
   try {
     // 1. Check if User model is imported correctly
     if (typeof User === "undefined") {
-      return res
-        .status(500)
-        .json({
-          message: "Backend Error: User model import missing at top of file",
-        });
+      return res.status(500).json({
+        message: "Backend Error: User model import missing at top of file",
+      });
     }
 
     const currentUser = await User.findById(req.user._id);
