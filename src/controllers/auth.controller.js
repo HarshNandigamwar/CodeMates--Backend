@@ -182,7 +182,7 @@ export const updateProfile = async (req, res) => {
       user.password = await bcrypt.hash(password, salt);
     }
 
-    // 2. Profile Picture Upload (Cloudinary)
+    // Profile Picture Upload (Cloudinary)
     if (req.file) {
       // Purani image delete karein
       if (user.profilePic && !user.profilePic.includes("placehold.co")) {
@@ -201,7 +201,7 @@ export const updateProfile = async (req, res) => {
       user.profilePic = result.secure_url;
     }
 
-    // 3. Other Details Update
+    // Other Details Update
     user.name = name || user.name;
     user.bio = bio || user.bio;
     user.github = github || user.github;
@@ -225,3 +225,13 @@ export const updateProfile = async (req, res) => {
       .json({ message: "Error updating profile", error: error.message });
   }
 };
+
+// logout
+export const logout = (req, res) => {
+  try {
+    res.status(200).json({ message: "Logged out successfully. Please clear token from client storage." });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+

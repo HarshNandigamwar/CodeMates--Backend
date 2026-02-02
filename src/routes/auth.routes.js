@@ -6,6 +6,7 @@ import {
   searchUsers,
   followUnfollowUser,
   updateProfile,
+  logout,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.middleware.js";
@@ -31,5 +32,6 @@ router.put(
   upload.single("profilePic"),
   updateProfile
 );
+router.post("/logout", logout);
 
 export default router;
