@@ -16,10 +16,10 @@ export const createPost = async (req, res) => {
       const result = await cloudinary.uploader.upload(fileUri, {
         folder: "codemates/codemates_posts",
         resource_type: "auto",
+        timeout: 60000,
       });
 
       mediaUrl = result.secure_url;
-      // result.resource_type will return "image" or "video" from Cloudinary
       mediaType = result.resource_type;
     }
 
@@ -27,7 +27,7 @@ export const createPost = async (req, res) => {
       user: req.user._id,
       content,
       url: mediaUrl,
-      mediaType: mediaType, // Now it will save "video" or "image" instead of "text"
+      mediaType: mediaType, // it will save "video" or "image" instead of "text"
     });
 
     await newPost.save();
@@ -80,10 +80,11 @@ export const commentPost = async (req, res) => {
 // 🏠 Get Feed from followed user
 export const getFollowedPosts = async (req, res) => {
   try {
-    // 1. Check if User model is imported correctly
+    // Check if User model is imported correctly
     if (typeof User === "undefined") {
       return res.status(500).json({
-        message: "Backend Error: User model import missing at top of file",
+        message:
+          "Backend Error: User model import missing at top of file post.controller.js",
       });
     }
 
@@ -128,31 +129,26 @@ export const editPost = async (req, res) => {
 
     // Media update logic (if a new file is uploaded)
     if (req.file) {
-      // 1. Purani file Cloudinary se delete karein (optional but recommended)
+      // Purani file Cloudinary se delete karein.
       if (post.url) {
         // URL se file name aur extension alag karein
-        // Example URL: .../codemates/codemates_posts/v12345/xyz.jpg
         const parts = post.url.split("/");
-        const filenameWithExtension = parts.pop(); // xyz.jpg
-        const filename = filenameWithExtension.split(".")[0]; // xyz
-
+        const filenameWithExtension = parts.pop();
+        const filename = filenameWithExtension.split(".")[0];
         // Cloudinary folder path ke saath Public ID banayein
         const publicId = `codemates/codemates_posts/${filename}`;
-
-        console.log("Deleting Public ID:", publicId); // Debugging ke liye
-
-        const response = await cloudinary.uploader.destroy(publicId, {
+        await cloudinary.uploader.destroy(publicId, {
           resource_type: post.mediaType === "text" ? "image" : post.mediaType,
         });
-        console.log("Cloudinary Response:", response);
       }
 
-      // 2. Nayi file upload karein
+      // Nayi file upload karein
       const fileBase64 = req.file.buffer.toString("base64");
       const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
       const result = await cloudinary.uploader.upload(fileUri, {
         folder: "codemates/codemates_posts",
         resource_type: "auto",
+        timeout: 60000,
       });
 
       post.url = result.secure_url;

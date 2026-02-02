@@ -5,7 +5,9 @@ import cloudinary from "../config/cloudinary.js";
 
 // Helper function to create a JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.TOKEN_EXPIRY,
+  });
 };
 
 //  Register new user
@@ -96,6 +98,7 @@ export const updateProfilePic = async (req, res) => {
     // Upload to Cloudinary
     const result = await cloudinary.uploader.upload(fileUri, {
       folder: "codemates/codemates_profiles",
+      timeout: 60000,
     });
 
     // Save the Cloudinary URL to the user in MongoDB
@@ -124,7 +127,7 @@ export const searchUsers = async (req, res) => {
         { username: { $regex: query, $options: "i" } },
         { name: { $regex: query, $options: "i" } },
       ],
-    }).select("username profilePic bio name"); // Only send necessary data to frontend
+    }).select("username profilePic bio name");
 
     res.status(200).json(users);
   } catch (error) {
@@ -181,7 +184,7 @@ export const updateProfile = async (req, res) => {
 
     // 2. Profile Picture Upload (Cloudinary)
     if (req.file) {
-      // Purani image delete karein (placeholder delete nahi karna hai)
+      // Purani image delete karein
       if (user.profilePic && !user.profilePic.includes("placehold.co")) {
         const publicId = user.profilePic.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(
@@ -193,6 +196,7 @@ export const updateProfile = async (req, res) => {
       const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
       const result = await cloudinary.uploader.upload(fileUri, {
         folder: "codemates/codemates_profiles",
+        timeout: 60000,
       });
       user.profilePic = result.secure_url;
     }
@@ -204,7 +208,6 @@ export const updateProfile = async (req, res) => {
     user.portfolio = portfolio || user.portfolio;
     user.linkedin = linkedin || user.linkedin;
 
-    // Techstack (Frontend se array aana chahiye)
     if (techstack) {
       user.techstack = Array.isArray(techstack)
         ? techstack
@@ -213,7 +216,6 @@ export const updateProfile = async (req, res) => {
 
     const updatedUser = await user.save();
 
-    // Password hide karke response bhejein
     const { password: _, ...userData } = updatedUser._doc;
     res.status(200).json(userData);
   } catch (error) {
