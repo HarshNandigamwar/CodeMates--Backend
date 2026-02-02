@@ -130,11 +130,21 @@ export const editPost = async (req, res) => {
     if (req.file) {
       // 1. Purani file Cloudinary se delete karein (optional but recommended)
       if (post.url) {
-        const publicId = post.url.split("/").slice(-2).join("/").split(".")[0];
-        await cloudinary.uploader.destroy(
-          `codemates/codemates_posts/${publicId}`,
-          { resource_type: post.mediaType }
-        );
+        // URL se file name aur extension alag karein
+        // Example URL: .../codemates/codemates_posts/v12345/xyz.jpg
+        const parts = post.url.split("/");
+        const filenameWithExtension = parts.pop(); // xyz.jpg
+        const filename = filenameWithExtension.split(".")[0]; // xyz
+
+        // Cloudinary folder path ke saath Public ID banayein
+        const publicId = `codemates/codemates_posts/${filename}`;
+
+        console.log("Deleting Public ID:", publicId); // Debugging ke liye
+
+        const response = await cloudinary.uploader.destroy(publicId, {
+          resource_type: post.mediaType === "text" ? "image" : post.mediaType,
+        });
+        console.log("Cloudinary Response:", response);
       }
 
       // 2. Nayi file upload karein
