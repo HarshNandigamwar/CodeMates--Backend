@@ -3,6 +3,7 @@ import Post from "../models/Post.model.js";
 
 // Get user profile data by username
 // GET /api/auth/profile/:username
+
 export const getUserProfile = async (req, res) => {
   try {
     const { username } = req.params;

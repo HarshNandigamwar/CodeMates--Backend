@@ -4,7 +4,7 @@ const postSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     content: { type: String, required: true },
-    url: { type: String, default: "" },
+    url: { type: String, default: "https://placehold.co/100x100" },
     mediaType: {
       type: String,
       enum: ["image", "video", "text"],
