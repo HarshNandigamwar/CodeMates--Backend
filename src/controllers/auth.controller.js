@@ -4,21 +4,21 @@ import jwt from "jsonwebtoken";
 import cloudinary from "../config/cloudinary.js";
 
 // Helper function to create a JWT Token
-const generateToken = (id, res) => {
-  const token = jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.TOKEN_EXPIRY,
-  });
+// const generateToken = (id, res) => {
+//   const token = jwt.sign({ id }, process.env.JWT_SECRET, {
+//     expiresIn: process.env.TOKEN_EXPIRY,
+//   });
 
-  const cookieOptions = {
-    expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
+//   const cookieOptions = {
+//     expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+//     httpOnly: true,
+//     secure: process.env.NODE_ENV === "production",
+//     sameSite: "strict",
+//   };
 
-  res.cookie("jwt_token", token, cookieOptions);
-  return token;
-};
+//   res.cookie("jwt_token", token, cookieOptions);
+//   return token;
+// };
 
 export const checkAuth = async (req, res) => {
   try {
@@ -45,16 +45,19 @@ export const signup = async (req, res) => {
       techstack,
     } = req.body;
 
-    // 1. Check if user already exists
+    // Check if user already exists (Email or Username)
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
-    if (userExists)
-      return res.status(400).json({ message: "User already exists" });
+    if (userExists) {
+      return res
+        .status(400)
+        .json({ message: "Username or Email already taken" });
+    }
 
-    // 2. Hash the password (Make it unreadable)
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. Create user in database
+    // Create user in database
     const user = await User.create({
       username,
       name,
@@ -67,13 +70,30 @@ export const signup = async (req, res) => {
       password: hashedPassword,
     });
 
-    // 4. Send response with token
-    res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      token: generateToken(user._id),
-    });
+    if (user) {
+      // Token Generate
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.TOKEN_EXPIRY,
+      });
+
+      // Cookie set karein
+      res.cookie("jwt_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 din ki expiry
+      });
+
+      // Final Response
+      res.status(201).json({
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        message: "User registered successfully",
+      });
+    }
   } catch (error) {
+    console.error("Signup Error:", error);
     res
       .status(500)
       .json({ message: "Server Error signup", error: error.message });
@@ -266,12 +286,6 @@ export const updateProfile = async (req, res) => {
 
 // logout
 export const logout = (req, res) => {
-  try {
-    res.status(200).json({
-      message:
-        "Logged out successfully. Please clear token from client storage.",
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+  res.cookie("jwt_token", "", { expires: new Date(0), httpOnly: true });
+  res.status(200).json({ message: "Logged out successfully" });
 };
