@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  checkAuth,
   signup,
   login,
   updateProfilePic,
@@ -16,6 +17,8 @@ const router = express.Router();
 
 router.post("/signup", signup);
 router.post("/login", login);
+
+router.get("/check", protect, checkAuth);
 
 router.put(
   "/update-profile-pic",

@@ -4,10 +4,29 @@ import jwt from "jsonwebtoken";
 import cloudinary from "../config/cloudinary.js";
 
 // Helper function to create a JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (id, res) => {
+  const token = jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.TOKEN_EXPIRY,
   });
+
+  const cookieOptions = {
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  res.cookie("jwt_token", token, cookieOptions);
+  return token;
+};
+
+export const checkAuth = async (req, res) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (error) {
+    console.log("Error in auth controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 //  Register new user
@@ -55,31 +74,50 @@ export const signup = async (req, res) => {
       token: generateToken(user._id),
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Server Error signup", error: error.message });
   }
 };
 
 //  Authenticate user & get token
 // POST /api/auth/login
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // 1. Find user by email
     const user = await User.findOne({ email });
 
-    // 2. Compare entered password with hashed password in DB
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+    if (isPasswordMatch) {
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.TOKEN_EXPIRY,
+      });
+
+      res.cookie("jwt_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+
       res.json({
         _id: user._id,
         username: user.username,
-        token: generateToken(user._id),
+        email: user.email,
+        message: "Login successful",
       });
     } else {
       res.status(401).json({ message: "Invalid email or password" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
@@ -229,9 +267,11 @@ export const updateProfile = async (req, res) => {
 // logout
 export const logout = (req, res) => {
   try {
-    res.status(200).json({ message: "Logged out successfully. Please clear token from client storage." });
+    res.status(200).json({
+      message:
+        "Logged out successfully. Please clear token from client storage.",
+    });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
