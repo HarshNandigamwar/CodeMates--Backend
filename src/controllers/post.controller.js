@@ -64,6 +64,7 @@ export const likePost = async (req, res) => {
   }
 };
 
+// Comment on Post
 export const commentPost = async (req, res) => {
   try {
     const { text } = req.body;
