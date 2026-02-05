@@ -26,8 +26,7 @@ export const createPost = async (req, res) => {
     const newPost = new Post({
       user: req.user._id,
       content,
-      name: req.user.
-      name,
+      name: req.user.name,
       url: mediaUrl,
       mediaType: mediaType, // it will save "video" or "image" instead of "text"
     });
@@ -59,23 +58,42 @@ export const likePost = async (req, res) => {
     await post.save();
     res.status(200).json(post);
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server Error", error });
+    console.log(error);
+    
   }
 };
 
-// 💬 Comment on Post
 export const commentPost = async (req, res) => {
   try {
     const { text } = req.body;
     const post = await Post.findById(req.params.id);
 
-    const newComment = { user: req.user._id, text };
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const newComment = {
+      user: req.user._id,
+      name: req.user.name || req.user.username,
+      profilePic: req.user.profilePic || "https://placehold.co/100x100",
+      text: text,
+      createdAt: new Date(),
+    };
+
     post.comments.push(newComment);
+
+    if (!post.name) {
+      post.name = req.user.name || "User";
+    }
 
     await post.save();
     res.status(200).json(post);
   } catch (error) {
-    res.status(500).json({ message: "Error adding comment" });
+    console.error("Comment Error:", error);
+    res
+      .status(500)
+      .json({ message: "Error adding comment", error: error.message });
   }
 };
 
