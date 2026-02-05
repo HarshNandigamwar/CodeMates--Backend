@@ -11,8 +11,8 @@ export const getUserProfile = async (req, res) => {
     // Find user by username
     const user = await User.findOne({ username })
       .select("-password")
-      .populate("followers", "username profilePic")
-      .populate("following", "username profilePic");
+      .populate("followers", "username name profilePic")
+      .populate("following", "username name profilePic");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -21,7 +21,7 @@ export const getUserProfile = async (req, res) => {
     // Find all posts created by this user
     const posts = await Post.find({ user: user._id })
       .sort({ createdAt: -1 }) // Newest posts first
-      .populate("user", "username profilePic");
+      .populate("user", "username name profilePic");
 
     // Construct the response
     res.status(200).json({
