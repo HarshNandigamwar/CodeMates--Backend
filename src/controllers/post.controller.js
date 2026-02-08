@@ -4,10 +4,11 @@ import User from "../models/User.model.js";
 
 // 📝 Create a Post (Supports Image & Video)
 export const createPost = async (req, res) => {
+  let uploadedPublicId = null;
+  let currentMediaType = "image"; 
   try {
     const { content } = req.body;
     let mediaUrl = "";
-    let mediaType = "text"; // Default if no file is uploaded
 
     if (req.file) {
       const fileBase64 = req.file.buffer.toString("base64");
@@ -20,7 +21,8 @@ export const createPost = async (req, res) => {
       });
 
       mediaUrl = result.secure_url;
-      mediaType = result.resource_type;
+      currentMediaType = result.resource_type; // 'image' or 'video'
+      uploadedPublicId = result.public_id;
     }
 
     const newPost = new Post({
@@ -28,14 +30,28 @@ export const createPost = async (req, res) => {
       content,
       name: req.user.name,
       url: mediaUrl,
-      mediaType: mediaType, // it will save "video" or "image" instead of "text"
+      mediaType: currentMediaType === "text" ? "image" : currentMediaType,
     });
 
     await newPost.save();
-    res.status(201).json(newPost);
+    return res.status(201).json(newPost);
   } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ message: "Error creating post" });
+    console.error("Post Creation Error:", error.message);
+    if (uploadedPublicId) {
+      console.log(
+        `Cleaning up from Cloudinary. ID: ${uploadedPublicId}, Type: ${currentMediaType}`
+      );
+      try {
+        await cloudinary.uploader.destroy(uploadedPublicId, {
+          resource_type: currentMediaType,
+        });
+        console.log("Cloudinary cleanup successful.");
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary Destroy Error:", cloudinaryErr.message);
+      }
+    }
+
+    return res.status(500).json({ message: "Error creating post" });
   }
 };
 
@@ -60,7 +76,6 @@ export const likePost = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
     console.log(error);
-    
   }
 };
 

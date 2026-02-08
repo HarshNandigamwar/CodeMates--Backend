@@ -3,22 +3,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cloudinary from "../config/cloudinary.js";
 
-// Helper function to create a JWT Token
-// const generateToken = (id, res) => {
-//   const token = jwt.sign({ id }, process.env.JWT_SECRET, {
-//     expiresIn: process.env.TOKEN_EXPIRY,
-//   });
-
-//   const cookieOptions = {
-//     expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === "production",
-//     sameSite: "strict",
-//   };
-
-//   res.cookie("jwt_token", token, cookieOptions);
-//   return token;
-// };
 
 export const checkAuth = async (req, res) => {
   try {
@@ -225,64 +209,129 @@ export const followUnfollowUser = async (req, res) => {
 };
 
 // Edit Profile
+// export const updateProfile = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const { name, password, bio, github, portfolio, linkedin, techstack } =
+//       req.body;
+
+//     let user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     // 1. Password Hash (Agar password update ho raha hai)
+//     if (password) {
+//       const salt = await bcrypt.genSalt(10);
+//       user.password = await bcrypt.hash(password, salt);
+//     }
+
+//     // Profile Picture Upload (Cloudinary)
+//     if (req.file) {
+//       // Purani image delete karein
+//       if (user.profilePic && !user.profilePic.includes("placehold.co")) {
+//         const publicId = user.profilePic.split("/").pop().split(".")[0];
+//         await cloudinary.uploader.destroy(
+//           `codemates/codemates_profiles/${publicId}`
+//         );
+//       }
+
+//       const fileBase64 = req.file.buffer.toString("base64");
+//       const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+//       const result = await cloudinary.uploader.upload(fileUri, {
+//         folder: "codemates/codemates_profiles",
+//         timeout: 60000,
+//       });
+//       user.profilePic = result.secure_url;
+//     }
+
+//     // Other Details Update
+//     user.name = name || user.name;
+//     user.bio = bio || user.bio;
+//     user.github = github || user.github;
+//     user.portfolio = portfolio || user.portfolio;
+//     user.linkedin = linkedin || user.linkedin;
+
+//     if (techstack) {
+//       user.techstack = Array.isArray(techstack)
+//         ? techstack
+//         : techstack.split(",");
+//     }
+
+//     const updatedUser = await user.save();
+
+//     const { password: _, ...userData } = updatedUser._doc;
+//     res.status(200).json(userData);
+//   } catch (error) {
+//     console.error("Profile Update Error:", error);
+//     res
+//       .status(500)
+//       .json({ message: "Error updating profile", error: error.message });
+//   }
+// };
 export const updateProfile = async (req, res) => {
+  let newPublicId = null; // Nayee image track karne ke liye
+  let oldPublicId = null; // Purani image delete karne ke liye
+
   try {
     const userId = req.user._id;
-    const { name, password, bio, github, portfolio, linkedin, techstack } =
-      req.body;
+    const { name, password, bio, github, portfolio, linkedin, techstack } = req.body;
 
     let user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // 1. Password Hash (Agar password update ho raha hai)
+    // 1. Password Hash
     if (password) {
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
     }
 
-    // Profile Picture Upload (Cloudinary)
+    // 2. Profile Picture Upload (New Image)
     if (req.file) {
-      // Purani image delete karein
-      if (user.profilePic && !user.profilePic.includes("placehold.co")) {
-        const publicId = user.profilePic.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(
-          `codemates/codemates_profiles/${publicId}`
-        );
-      }
-
       const fileBase64 = req.file.buffer.toString("base64");
       const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+
       const result = await cloudinary.uploader.upload(fileUri, {
         folder: "codemates/codemates_profiles",
-        timeout: 60000,
+        resource_type: "image",
       });
+
+      // Purani image ka ID nikal lo lekin abhi delete MAT karo
+      if (user.profilePic && !user.profilePic.includes("placehold.co")) {
+        // "folder/filename" format nikalne ke liye
+        oldPublicId = user.profilePic.split("/").slice(-3).join("/").split(".")[0];
+      }
+
+      // Nayee image ke details set karein
       user.profilePic = result.secure_url;
+      newPublicId = result.public_id; // Rollback ke liye
     }
 
-    // Other Details Update
+    // 3. Other fields update
     user.name = name || user.name;
     user.bio = bio || user.bio;
-    user.github = github || user.github;
-    user.portfolio = portfolio || user.portfolio;
-    user.linkedin = linkedin || user.linkedin;
+    // ... baaki fields bhi isi tarah update karein
 
-    if (techstack) {
-      user.techstack = Array.isArray(techstack)
-        ? techstack
-        : techstack.split(",");
+    await user.save();
+
+    // 4. DATABASE SUCCESS! Ab purani image delete kar sakte hain
+    if (oldPublicId) {
+      cloudinary.uploader.destroy(oldPublicId).catch(err => console.error("Old Pic Delete Fail:", err));
     }
 
-    const updatedUser = await user.save();
+    res.status(200).json(user);
 
-    const { password: _, ...userData } = updatedUser._doc;
-    res.status(200).json(userData);
   } catch (error) {
-    console.error("Profile Update Error:", error);
-    res
-      .status(500)
-      .json({ message: "Error updating profile", error: error.message });
+    console.error("Update Profile Error:", error);
+
+    // ROLLBACK: Agar database fail hua, toh nayee upload ki hui image delete kardo
+    if (newPublicId) {
+      console.log("Database failed, rolling back new image...");
+      await cloudinary.uploader.destroy(newPublicId).catch(err => console.error("Rollback Fail:", err));
+    }
+
+    res.status(500).json({ message: "Error updating profile" });
   }
 };
+
 
 // logout
 export const logout = (req, res) => {
