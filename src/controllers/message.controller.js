@@ -60,18 +60,18 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const { id: userToChatId } = req.params;
-    const myId = req.user._id;
+    const senderId = req.user._id;
 
     const messages = await Message.find({
       $or: [
-        { sender: myId, receiver: userToChatId },
-        { sender: userToChatId, receiver: myId },
+        { sender: senderId, receiver: userToChatId },
+        { sender: userToChatId, receiver: senderId },
       ],
     }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
-    console.log("Error in getMessages: ", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ message: "Error fetching messages" });
   }
 };
+
