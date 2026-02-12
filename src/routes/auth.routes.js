@@ -11,7 +11,10 @@ import {
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.middleware.js";
-import { getUserProfile } from "../controllers/user.controller.js";
+import {
+  getUserProfile,
+  getSuggestedUsers,
+} from "../controllers/user.controller.js";
 
 const router = express.Router();
 
@@ -35,6 +38,7 @@ router.put(
   upload.single("profilePic"),
   updateProfile
 );
+router.get("/suggested", protect, getSuggestedUsers);
 router.post("/logout", logout);
 
 export default router;
