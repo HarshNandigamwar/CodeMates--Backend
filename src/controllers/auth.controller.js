@@ -255,7 +255,13 @@ export const updateProfile = async (req, res) => {
     user.github = github || user.github;
     user.portfolio = portfolio || user.portfolio;
     user.linkedin = linkedin || user.linkedin;
-    user.techstack = techstack || user.techstack;
+    if (techstack) {
+  try {
+    user.techstack = typeof techstack === "string" ? JSON.parse(techstack) : techstack;
+  } catch (e) {
+    user.techstack = techstack.split(",").map(item => item.trim());
+  }
+}
     await user.save();
 
     if (oldPublicId) {
