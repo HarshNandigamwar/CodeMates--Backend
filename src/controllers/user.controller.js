@@ -40,8 +40,6 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-
-// backend/controllers/user.controller.js
 export const getSuggestedUsers = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
@@ -54,4 +52,3 @@ export const getSuggestedUsers = async (req, res) => {
     res.status(500).json({ message: "Error fetching users" });
   }
 };
-
