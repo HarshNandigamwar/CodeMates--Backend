@@ -236,7 +236,6 @@ export const updateProfile = async (req, res) => {
 
       // Purani image ka ID nikal lo lekin abhi delete MAT karo
       if (user.profilePic && !user.profilePic.includes("placehold.co")) {
-        // "folder/filename" format nikalne ke liye
         oldPublicId = user.profilePic
           .split("/")
           .slice(-3)
