@@ -62,9 +62,9 @@ export const signup = async (req, res) => {
       // Cookie set karein
       res.cookie("jwt_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 din ki expiry
+        secure: true,
+        sameSite: "none",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 din ki expiry
       });
 
       // Final Response
@@ -103,9 +103,9 @@ export const login = async (req, res) => {
 
       res.cookie("jwt_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        secure: true,
+        sameSite: "none",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.json({
@@ -255,12 +255,13 @@ export const updateProfile = async (req, res) => {
     user.portfolio = portfolio || user.portfolio;
     user.linkedin = linkedin || user.linkedin;
     if (techstack) {
-  try {
-    user.techstack = typeof techstack === "string" ? JSON.parse(techstack) : techstack;
-  } catch (e) {
-    user.techstack = techstack.split(",").map(item => item.trim());
-  }
-}
+      try {
+        user.techstack =
+          typeof techstack === "string" ? JSON.parse(techstack) : techstack;
+      } catch (e) {
+        user.techstack = techstack.split(",").map((item) => item.trim());
+      }
+    }
     await user.save();
 
     if (oldPublicId) {
