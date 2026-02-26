@@ -214,7 +214,7 @@ export const followUnfollowUser = async (req, res) => {
     console.log(error.message);
   }
 };
-
+// Update Profile
 export const updateProfile = async (req, res) => {
   let newPublicId = null;
   let oldPublicId = null;
