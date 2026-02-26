@@ -116,6 +116,7 @@ export const login = async (req, res) => {
       });
     } else {
       res.status(401).json({ message: "Invalid email or password" });
+      console.log("Invalid email or password");
     }
   } catch (error) {
     console.error("Login Error:", error);
@@ -172,6 +173,7 @@ export const searchUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: "Search failed", error: error.message });
+    console.log(error.message);
   }
 };
 
@@ -203,6 +205,7 @@ export const followUnfollowUser = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+    console.log(error.message);
   }
 };
 
@@ -290,4 +293,5 @@ export const updateProfile = async (req, res) => {
 export const logout = (req, res) => {
   res.cookie("jwt_token", "", { expires: new Date(0), httpOnly: true });
   res.status(200).json({ message: "Logged out successfully" });
+  console.log("Logged out successfully");
 };

@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 
-
 export const protect = async (req, res, next) => {
   try {
     let token = req.cookies.jwt_token;
@@ -21,5 +20,6 @@ export const protect = async (req, res, next) => {
     next();
   } catch (error) {
     res.status(401).json({ message: "Token failed or expired" });
+    console.log(error);
   }
 };

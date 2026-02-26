@@ -37,6 +37,8 @@ export const getUserProfile = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching profile", error: error.message });
+
+    console.log(error);
   }
 };
 
@@ -50,5 +52,6 @@ export const getSuggestedUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: "Error fetching users" });
+    console.log(error);
   }
 };

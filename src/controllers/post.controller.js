@@ -5,7 +5,7 @@ import User from "../models/User.model.js";
 // 📝 Create a Post (Supports Image & Video)
 export const createPost = async (req, res) => {
   let uploadedPublicId = null;
-  let currentMediaType = "image"; 
+  let currentMediaType = "image";
   try {
     const { content } = req.body;
     let mediaUrl = "";
@@ -231,5 +231,6 @@ export const deletePost = async (req, res) => {
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting post" });
+    console.log("Error deleting post", error);
   }
 };
