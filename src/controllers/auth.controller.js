@@ -70,10 +70,13 @@ export const signup = async (req, res) => {
       // Final Response
       res.status(201).json({
         _id: user._id,
+        profilePic: user.profilePic,
+        name: user.name,
         username: user.username,
         email: user.email,
         message: "User registered successfully",
       });
+      console.log(user.name, "registered successfully");
     }
   } catch (error) {
     console.error("Signup Error:", error);
@@ -110,10 +113,13 @@ export const login = async (req, res) => {
 
       res.json({
         _id: user._id,
+        profilePic: user.profilePic,
+        name: user.name,
         username: user.username,
         email: user.email,
         message: "Login successful",
       });
+      console.log(user.name, "Login successful");
     } else {
       res.status(401).json({ message: "Invalid email or password" });
       console.log("Invalid email or password");
@@ -273,7 +279,14 @@ export const updateProfile = async (req, res) => {
         .catch((err) => console.error("Old Pic Delete Fail:", err));
     }
 
-    res.status(200).json(user);
+    res.status(200).json({
+      _id: user._id,
+      profilePic: user.profilePic,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      message: "User profile update successfully",
+    });
   } catch (error) {
     console.error("Update Profile Error:", error);
 

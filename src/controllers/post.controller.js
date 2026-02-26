@@ -92,7 +92,9 @@ export const commentPost = async (req, res) => {
     const newComment = {
       user: req.user._id,
       name: req.user.name || req.user.username,
-      profilePic: req.user.profilePic || "https://placehold.co/100x100",
+      profilePic:
+        req.user.profilePic ||
+        "https://res.cloudinary.com/darmatnf2/image/upload/v1772109026/user_pic_taeqah.png",
       text: text,
       createdAt: new Date(),
     };
@@ -119,8 +121,7 @@ export const getFollowedPosts = async (req, res) => {
     // Check if User model is imported correctly
     if (typeof User === "undefined") {
       return res.status(500).json({
-        message:
-          "Backend Error: User model import missing at top of file post.controller.js",
+        message: "Backend Error: can not get Feed from followed user ",
       });
     }
 
