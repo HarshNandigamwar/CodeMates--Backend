@@ -304,15 +304,15 @@ export const updateProfile = async (req, res) => {
 
 // logout
 export const logout = (req, res) => {
-  res.cookie("jwt_token", "", { 
+  res.cookie("jwt_token", "", {
     httpOnly: true,
-    secure: true, 
+    secure: true,
     sameSite: "none",
-    expires: new Date(0), 
+    expires: new Date(0),
   });
   console.log("Logged out successfully");
-  return res.status(200).json({ 
-    success: true, 
-    message: "Logged out successfully" 
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
   });
 };

@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema(
     techstack: [{ type: String }],
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    lastMessageAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );

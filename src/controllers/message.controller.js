@@ -25,6 +25,10 @@ export const sendMessage = async (req, res) => {
 
         fileUrl = result.secure_url;
         mediaType = result.resource_type === "video" ? "video" : "image";
+        await User.updateMany(
+          { _id: { $in: [senderId, receiverId] } },
+          { $set: { lastMessageAt: Date.now() } }
+        );
       } catch (cloudinaryErr) {
         console.error("Cloudinary Upload Error:", cloudinaryErr);
         return res
