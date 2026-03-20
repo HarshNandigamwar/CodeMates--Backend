@@ -183,6 +183,26 @@ export const searchUsers = async (req, res) => {
   }
 };
 
+// Search user by ID
+// GET /api/auth/searchbyid/:id
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select("profilePic name");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching user", error: error.message });
+    console.log(error.message);
+  }
+};
+
 // Follow/Unfollow a user
 // POST /api/auth/follow/:id
 export const followUnfollowUser = async (req, res) => {

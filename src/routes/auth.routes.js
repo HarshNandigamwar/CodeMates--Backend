@@ -5,6 +5,7 @@ import {
   login,
   updateProfilePic,
   searchUsers,
+  getUserById,
   followUnfollowUser,
   updateProfile,
   logout,
@@ -27,16 +28,17 @@ router.put(
   "/update-profile-pic",
   protect,
   upload.single("profilePic"),
-  updateProfilePic
+  updateProfilePic,
 );
 router.get("/search/:query", protect, searchUsers);
+router.get("/searchbyid/:id", protect, getUserById);
 router.post("/follow/:id", protect, followUnfollowUser);
 router.get("/profile/:username", protect, getUserProfile);
 router.put(
   "/update-profile",
   protect,
   upload.single("profilePic"),
-  updateProfile
+  updateProfile,
 );
 router.get("/suggested", protect, getSuggestedUsers);
 router.post("/logout", logout);
