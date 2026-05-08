@@ -4,234 +4,216 @@ import User from "../models/User.model.js";
 
 // 📝 Create a Post (Supports Image & Video)
 export const createPost = async (req, res) => {
-  let uploadedPublicId = null;
-  let currentMediaType = "image";
-  try {
-    const { content } = req.body;
-    let mediaUrl = "";
+    let uploadedPublicId = null;
+    let currentMediaType = "image";
+    try {
+        const {content} = req.body;
+        let mediaUrl = "";
 
-    if (req.file) {
-      const fileBase64 = req.file.buffer.toString("base64");
-      const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+        if (req.file) {
+            const fileBase64 = req.file.buffer.toString("base64");
+            const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
 
-      const result = await cloudinary.uploader.upload(fileUri, {
-        folder: "codemates/codemates_posts",
-        resource_type: "auto",
-        timeout: 60000,
-      });
+            const result = await cloudinary.uploader.upload(fileUri, {
+                folder: "codemates/codemates_posts",
+                resource_type: "auto",
+                timeout: 60000,
+            });
 
-      mediaUrl = result.secure_url;
-      currentMediaType = result.resource_type; // 'image' or 'video'
-      uploadedPublicId = result.public_id;
-    }
+            mediaUrl = result.secure_url;
+            currentMediaType = result.resource_type; // 'image' or 'video'
+            uploadedPublicId = result.public_id;
+        }
 
-    const newPost = new Post({
-      user: req.user._id,
-      content,
-      name: req.user.name,
-      url: mediaUrl,
-      mediaType: currentMediaType === "text" ? "image" : currentMediaType,
-    });
-
-    await newPost.save();
-    return res.status(201).json(newPost);
-  } catch (error) {
-    console.error("Post Creation Error:", error.message);
-    if (uploadedPublicId) {
-      console.log(
-        `Cleaning up from Cloudinary. ID: ${uploadedPublicId}, Type: ${currentMediaType}`
-      );
-      try {
-        await cloudinary.uploader.destroy(uploadedPublicId, {
-          resource_type: currentMediaType,
+        const newPost = new Post({
+            user: req.user._id,
+            content,
+            name: req.user.name,
+            url: mediaUrl,
+            mediaType: currentMediaType === "text" ? "image" : currentMediaType,
         });
-        console.log("Cloudinary cleanup successful.");
-      } catch (cloudinaryErr) {
-        console.error("Cloudinary Destroy Error:", cloudinaryErr.message);
-      }
-    }
 
-    return res.status(500).json({ message: "Error creating post" });
-  }
+        await newPost.save();
+        return res.status(201).json(newPost);
+    } catch (error) {
+        console.error("Post Creation Error:", error.message);
+        if (uploadedPublicId) {
+            console.log(`Cleaning up from Cloudinary. ID: ${uploadedPublicId}, Type: ${currentMediaType}`);
+            try {
+                await cloudinary.uploader.destroy(uploadedPublicId, {
+                    resource_type: currentMediaType,
+                });
+                console.log("Cloudinary cleanup successful.");
+            } catch (cloudinaryErr) {
+                console.error("Cloudinary Destroy Error:", cloudinaryErr.message);
+            }
+        }
+
+        return res.status(500).json({message: "Error creating post"});
+    }
 };
 
 // 👍 Like / Unlike Post
 export const likePost = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({message: "Post not found"});
 
-    if (post.likes.includes(req.user._id)) {
-      // Already liked? Unlike it
-      post.likes = post.likes.filter(
-        (id) => id.toString() !== req.user._id.toString()
-      );
-    } else {
-      // Not liked? Add like
-      post.likes.push(req.user._id);
+        if (post.likes.includes(req.user._id)) {
+            // Already liked? Unlike it
+            post.likes = post.likes.filter((id) => id.toString() !== req.user._id.toString());
+        } else {
+            // Not liked? Add like
+            post.likes.push(req.user._id);
+        }
+
+        await post.save();
+        res.status(200).json(post);
+    } catch (error) {
+        res.status(500).json({message: "Server Error", error});
+        console.log(error);
     }
-
-    await post.save();
-    res.status(200).json(post);
-  } catch (error) {
-    res.status(500).json({ message: "Server Error", error });
-    console.log(error);
-  }
 };
 
 // Comment on Post
 export const commentPost = async (req, res) => {
-  try {
-    const { text } = req.body;
-    const post = await Post.findById(req.params.id);
+    try {
+        const {text} = req.body;
+        const post = await Post.findById(req.params.id);
 
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
+        if (!post) {
+            return res.status(404).json({message: "Post not found"});
+        }
+
+        const newComment = {
+            user: req.user._id,
+            name: req.user.name || req.user.username,
+            profilePic: req.user.profilePic || "https://res.cloudinary.com/darmatnf2/image/upload/v1772109026/user_pic_taeqah.png",
+            text: text,
+            createdAt: new Date(),
+        };
+
+        post.comments.push(newComment);
+
+        if (!post.name) {
+            post.name = req.user.name || "User";
+        }
+
+        await post.save();
+        res.status(200).json(post);
+    } catch (error) {
+        console.error("Comment Error:", error);
+        res.status(500).json({message: "Error adding comment", error: error.message});
     }
-
-    const newComment = {
-      user: req.user._id,
-      name: req.user.name || req.user.username,
-      profilePic:
-        req.user.profilePic ||
-        "https://res.cloudinary.com/darmatnf2/image/upload/v1772109026/user_pic_taeqah.png",
-      text: text,
-      createdAt: new Date(),
-    };
-
-    post.comments.push(newComment);
-
-    if (!post.name) {
-      post.name = req.user.name || "User";
-    }
-
-    await post.save();
-    res.status(200).json(post);
-  } catch (error) {
-    console.error("Comment Error:", error);
-    res
-      .status(500)
-      .json({ message: "Error adding comment", error: error.message });
-  }
 };
 
 // 🏠 Get Feed from followed user
 export const getFollowedPosts = async (req, res) => {
-  try {
-    // Check if User model is imported correctly
-    if (typeof User === "undefined") {
-      return res.status(500).json({
-        message: "Backend Error: can not get Feed from followed user ",
-      });
+    try {
+        // Check if User model is imported correctly
+        if (typeof User === "undefined") {
+            return res.status(500).json({
+                message: "Backend Error: can not get Feed from followed user ",
+            });
+        }
+
+        const currentUser = await User.findById(req.user._id);
+
+        if (!currentUser) {
+            return res.status(404).json({message: "Login user not found"});
+        }
+
+        // 2. Fetch posts
+        const posts = await Post.find({
+            user: {$in: [...currentUser.following, req.user._id]},
+        })
+            .sort({createdAt: -1})
+            .populate("user", "username profilePic");
+
+        res.status(200).json(posts);
+    } catch (error) {
+        console.error("DEBUG FEED ERROR:", error);
+        res.status(500).json({message: "Error fetching feed", error: error.message});
     }
-
-    const currentUser = await User.findById(req.user._id);
-
-    if (!currentUser) {
-      return res.status(404).json({ message: "Login user not found" });
-    }
-
-    // 2. Fetch posts
-    const posts = await Post.find({
-      user: { $in: [...currentUser.following, req.user._id] },
-    })
-      .sort({ createdAt: -1 })
-      .populate("user", "username profilePic");
-
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error("DEBUG FEED ERROR:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching feed", error: error.message });
-  }
 };
 
 // Edit Post
 export const editPost = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { content } = req.body;
+    try {
+        const {id} = req.params;
+        const {content} = req.body;
 
-    let post = await Post.findById(id);
+        let post = await Post.findById(id);
 
-    if (!post) return res.status(404).json({ message: "Post not found" });
+        if (!post) return res.status(404).json({message: "Post not found"});
 
-    // Check ownership
-    if (post.user.toString() !== req.user._id.toString()) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized to edit this post" });
+        // Check ownership
+        if (post.user.toString() !== req.user._id.toString()) {
+            return res.status(401).json({message: "Unauthorized to edit this post"});
+        }
+
+        // Media update logic (if a new file is uploaded)
+        if (req.file) {
+            // Purani file Cloudinary se delete karein.
+            if (post.url) {
+                // URL se file name aur extension alag karein
+                const parts = post.url.split("/");
+                const filenameWithExtension = parts.pop();
+                const filename = filenameWithExtension.split(".")[0];
+                // Cloudinary folder path ke saath Public ID banayein
+                const publicId = `codemates/codemates_posts/${filename}`;
+                await cloudinary.uploader.destroy(publicId, {
+                    resource_type: post.mediaType === "text" ? "image" : post.mediaType,
+                });
+            }
+
+            // Nayi file upload karein
+            const fileBase64 = req.file.buffer.toString("base64");
+            const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
+            const result = await cloudinary.uploader.upload(fileUri, {
+                folder: "codemates/codemates_posts",
+                resource_type: "auto",
+                timeout: 60000,
+            });
+
+            post.url = result.secure_url;
+            post.mediaType = result.resource_type;
+        }
+
+        // Text update karein
+        if (content) post.content = content;
+
+        await post.save();
+        res.status(200).json(post);
+    } catch (error) {
+        console.error("Edit Error:", error);
+        res.status(500).json({message: "Error updating post", error: error.message});
     }
-
-    // Media update logic (if a new file is uploaded)
-    if (req.file) {
-      // Purani file Cloudinary se delete karein.
-      if (post.url) {
-        // URL se file name aur extension alag karein
-        const parts = post.url.split("/");
-        const filenameWithExtension = parts.pop();
-        const filename = filenameWithExtension.split(".")[0];
-        // Cloudinary folder path ke saath Public ID banayein
-        const publicId = `codemates/codemates_posts/${filename}`;
-        await cloudinary.uploader.destroy(publicId, {
-          resource_type: post.mediaType === "text" ? "image" : post.mediaType,
-        });
-      }
-
-      // Nayi file upload karein
-      const fileBase64 = req.file.buffer.toString("base64");
-      const fileUri = `data:${req.file.mimetype};base64,${fileBase64}`;
-      const result = await cloudinary.uploader.upload(fileUri, {
-        folder: "codemates/codemates_posts",
-        resource_type: "auto",
-        timeout: 60000,
-      });
-
-      post.url = result.secure_url;
-      post.mediaType = result.resource_type;
-    }
-
-    // Text update karein
-    if (content) post.content = content;
-
-    await post.save();
-    res.status(200).json(post);
-  } catch (error) {
-    console.error("Edit Error:", error);
-    res
-      .status(500)
-      .json({ message: "Error updating post", error: error.message });
-  }
 };
 
 // Delete Post
 export const deletePost = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
+    try {
+        const post = await Post.findById(req.params.id);
 
-    if (!post) return res.status(404).json({ message: "Post not found" });
+        if (!post) return res.status(404).json({message: "Post not found"});
 
-    // Check if the person deleting is the owner
-    if (post.user.toString() !== req.user._id.toString()) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized to delete this post" });
+        // Check if the person deleting is the owner
+        if (post.user.toString() !== req.user._id.toString()) {
+            return res.status(401).json({message: "Unauthorized to delete this post"});
+        }
+
+        // If there is an image/video, delete it from Cloudinary
+        if (post.url) {
+            // We extract the "Public ID" from the URL
+            const publicId = post.url.split("/").pop().split(".")[0];
+            await cloudinary.uploader.destroy(`codemates/codemates_posts/${publicId}`);
+        }
+
+        await Post.findByIdAndDelete(req.params.id);
+        res.status(200).json({message: "Post deleted successfully"});
+    } catch (error) {
+        res.status(500).json({message: "Error deleting post"});
+        console.log("Error deleting post", error);
     }
-
-    // If there is an image/video, delete it from Cloudinary
-    if (post.url) {
-      // We extract the "Public ID" from the URL
-      const publicId = post.url.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(
-        `codemates/codemates_posts/${publicId}`
-      );
-    }
-
-    await Post.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Post deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error deleting post" });
-    console.log("Error deleting post", error);
-  }
 };

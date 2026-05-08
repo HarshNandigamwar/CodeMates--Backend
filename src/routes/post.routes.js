@@ -1,14 +1,7 @@
 import express from "express";
-import { protect } from "../middleware/auth.middleware.js";
+import {protect} from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.middleware.js";
-import {
-  createPost,
-  getFollowedPosts,
-  likePost,
-  commentPost,
-  editPost,
-  deletePost,
-} from "../controllers/post.controller.js";
+import {createPost, getFollowedPosts, likePost, commentPost, editPost, deletePost} from "../controllers/post.controller.js";
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
 import express from "express";
 import upload from "../middleware/multer.middleware.js";
-import { protect } from "../middleware/auth.middleware.js";
-import { sendMessage, getMessages } from "../controllers/message.controller.js";
+import {protect} from "../middleware/auth.middleware.js";
+import {sendMessage, getMessages} from "../controllers/message.controller.js";
 
 const router = express.Router();
 
